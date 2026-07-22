@@ -30,6 +30,11 @@ export function SectionStep({
 
   const sectionFollowUps = draft.followUps.filter((f) => f.sectionId === section.id);
 
+  const role =
+    draft.identity.role === "Other"
+      ? draft.identity.roleOther || "Other"
+      : draft.identity.role || "";
+
   const setAnswer = (id: string, value: AnswerValue) =>
     setDraft((d) => ({ ...d, answers: { ...d.answers, [id]: value } }));
 
@@ -55,14 +60,17 @@ export function SectionStep({
     return empty ? "This field is required." : undefined;
   };
 
+  /** Context for tailor: other answers in this section (excluding the target id). */
+  const sectionContextFor = (excludeId: string) =>
+    questions
+      .filter((q) => q.id !== excludeId)
+      .map((q) => `${q.label}: ${stringifyAnswer(draft.answers[q.id])}`)
+      .join("\n");
+
   const getFollowUps = async () => {
     setLoadingFollow(true);
     setFollowErr(null);
     try {
-      const role =
-        draft.identity.role === "Other"
-          ? draft.identity.roleOther || "Other"
-          : draft.identity.role;
       const answersSoFar = questions
         .map((q) => `${q.label}: ${stringifyAnswer(draft.answers[q.id])}`)
         .join("\n");
@@ -105,6 +113,11 @@ export function SectionStep({
           value={draft.answers[q.id]}
           onChange={(v) => setAnswer(q.id, v)}
           error={answerError(q)}
+          llmConfigured={llmConfigured}
+          skillTitle={draft.basics.title}
+          role={role}
+          sectionTitle={section.title}
+          sectionContext={sectionContextFor(q.id)}
         />
       ))}
 

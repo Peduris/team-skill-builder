@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
   RefreshCw,
@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   Sparkles,
   FolderGit2,
+  RotateCcw,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Feedback";
@@ -26,6 +28,7 @@ export function PreviewStep({
   repo,
   llmConfigured,
   onSaved,
+  onBack,
 }: {
   draft: SkillDraft;
   githubConfigured: boolean;
@@ -33,8 +36,13 @@ export function PreviewStep({
   repo: string | null;
   llmConfigured: boolean;
   onSaved: (result: SaveResult) => void;
+  onBack: () => void;
 }) {
   const [markdown, setMarkdown] = useState("");
+  const [previousMarkdown, setPreviousMarkdown] = useState<string | null>(null);
+  const markdownRef = useRef(markdown);
+  markdownRef.current = markdown;
+
   const [generating, setGenerating] = useState(true);
   const [enhancing, setEnhancing] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
@@ -47,9 +55,15 @@ export function PreviewStep({
   const [duplicate, setDuplicate] = useState(false);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
 
+  const pushHistory = (current: string) => {
+    if (current.trim()) setPreviousMarkdown(current);
+  };
+
   const generate = useCallback(async () => {
     setGenerating(true);
     setSaveErr(null);
+    setEnhanceErr(null);
+    const before = markdownRef.current;
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -57,8 +71,11 @@ export function PreviewStep({
         body: JSON.stringify(draft),
       });
       const data = await res.json();
-      setMarkdown(data.markdown ?? "");
+      const next = data.markdown ?? "";
+      if (before.trim() && before !== next) setPreviousMarkdown(before);
+      setMarkdown(next);
       setUsedFallback(Boolean(data.usedFallback));
+      setEnhancedOnce(false);
     } catch {
       setSaveErr("Generation failed. Try again.");
     } finally {
@@ -93,7 +110,8 @@ export function PreviewStep({
     URL.revokeObjectURL(url);
   };
 
-  const enhance = async () => {
+  /** Enhance all: regenerate the full skill context from answers + current draft. */
+  const enhanceAll = async () => {
     if (!markdown.trim() || enhancing || generating) return;
     setEnhancing(true);
     setEnhanceErr(null);
@@ -109,6 +127,7 @@ export function PreviewStep({
         setEnhanceErr(data.error || "Enhancement failed.");
         return;
       }
+      pushHistory(markdown);
       setMarkdown(data.markdown ?? markdown);
       setUsedFallback(false);
       setEnhancedOnce(true);
@@ -118,6 +137,14 @@ export function PreviewStep({
     } finally {
       setEnhancing(false);
     }
+  };
+
+  const redo = () => {
+    if (!previousMarkdown) return;
+    setMarkdown(previousMarkdown);
+    setPreviousMarkdown(null);
+    setEnhancedOnce(false);
+    setEnhanceErr(null);
   };
 
   const save = async () => {
@@ -148,6 +175,22 @@ export function PreviewStep({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={busy}>
+          <ArrowLeft className="size-4" aria-hidden />
+          Back
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={redo}
+          disabled={!previousMarkdown || busy}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Redo
+        </Button>
+      </div>
+
       {repo && (
         <Notice tone="info">
           <span className="inline-flex items-center gap-1.5">
@@ -189,12 +232,12 @@ export function PreviewStep({
             <Button
               variant="secondary"
               size="sm"
-              onClick={enhance}
+              onClick={enhanceAll}
               loading={enhancing}
               disabled={busy || !markdown.trim()}
             >
               <Sparkles className="size-4" aria-hidden />
-              {enhancedOnce ? "Enhance again" : "Enhance skill"}
+              {enhancedOnce ? "Enhance all again" : "Enhance all"}
             </Button>
           )}
         </div>
@@ -202,21 +245,24 @@ export function PreviewStep({
 
       {llmConfigured && (
         <p className="text-sm text-muted">
-          <strong className="font-medium text-ink">Enhance skill</strong> asks the AI to fill
-          gaps, sharpen triggers, and deepen judgment using your answers — without inventing
-          fake company facts.
+          <strong className="font-medium text-ink">Enhance all</strong> regenerates the full
+          skill from every answer — filling gaps and sharpening context.{" "}
+          <strong className="font-medium text-ink">Redo</strong> restores the previous version.{" "}
+          <strong className="font-medium text-ink">Back</strong> returns to review.
         </p>
       )}
 
       {usedFallback && (
         <Notice tone="info">
           Built with the deterministic template (AI assembly unavailable). You can edit the raw
-          file below before saving{llmConfigured ? ", or try Enhance skill" : ""}.
+          file below before saving{llmConfigured ? ", or try Enhance all" : ""}.
         </Notice>
       )}
 
       {enhancedOnce && !enhancing && (
-        <Notice tone="ok">Skill enhanced. Review the changes, then save.</Notice>
+        <Notice tone="ok">
+          Skill enhanced from all answers. Review, then save — or hit Redo to undo.
+        </Notice>
       )}
       {enhanceErr && <Notice tone="danger">{enhanceErr}</Notice>}
 
@@ -244,7 +290,9 @@ export function PreviewStep({
         {busy ? (
           <div className="flex h-72 items-center justify-center text-sm text-muted">
             <span className="mr-2 size-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-            {enhancing ? "Enhancing your skill…" : "Assembling your SKILL.md…"}
+            {enhancing
+              ? "Enhancing skill from all answers…"
+              : "Assembling your SKILL.md…"}
           </div>
         ) : view === "rendered" ? (
           <div className="p-5">
@@ -285,6 +333,18 @@ export function PreviewStep({
       )}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <Button variant="ghost" onClick={onBack} disabled={busy}>
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to review
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={redo}
+          disabled={!previousMarkdown || busy}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Redo
+        </Button>
         <Button variant="secondary" onClick={download}>
           <Download className="size-4" aria-hidden /> Download SKILL.md
         </Button>

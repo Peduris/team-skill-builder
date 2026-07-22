@@ -117,3 +117,81 @@ export async function enhanceSkill(
     .replace(/\n```\s*$/, "")
     .trim();
 }
+
+export type TailorKind = "text" | "process-steps";
+
+export interface TailorParams {
+  kind: TailorKind;
+  questionLabel: string;
+  questionHelp?: string;
+  sectionTitle: string;
+  skillTitle: string;
+  role: string;
+  /** Current answer as plain text, or JSON string of ProcessStep[] */
+  currentAnswer: string;
+  /** Other answers in this section for context */
+  sectionContext?: string;
+}
+
+/**
+ * Tailor / enhance a single questionnaire answer (or process-steps list).
+ * For kind "text": returns improved prose.
+ * For kind "process-steps": returns a JSON array of {what, why}.
+ */
+export async function tailorAnswer(params: TailorParams): Promise<string | null> {
+  if (params.kind === "process-steps") {
+    const system = `You improve a person's step-by-step work process for an Agent Skill questionnaire.
+Return ONLY a JSON array of objects with "what" and "why" string fields. No markdown fences, no commentary.
+Keep the author's intent. Clarify vague steps, add missing WHY where obvious from context, do not invent fake company tools or metrics. Aim for 3–8 concrete steps.`;
+    const user = [
+      `Skill: ${params.skillTitle}`,
+      `Role: ${params.role}`,
+      `Section: ${params.sectionTitle}`,
+      `Question: ${params.questionLabel}`,
+      params.questionHelp ? `Hint: ${params.questionHelp}` : "",
+      params.sectionContext ? `Other answers in this section:\n${params.sectionContext}` : "",
+      "",
+      "Current steps (JSON or rough notes):",
+      params.currentAnswer || "[]",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const out = await complete(system, user, 1500);
+    if (!out) return null;
+    const cleaned = out.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```$/, "").trim();
+    // Validate JSON shape; return cleaned JSON string
+    try {
+      const parsed = JSON.parse(cleaned) as unknown;
+      if (!Array.isArray(parsed)) return null;
+      const steps = parsed
+        .map((s) => {
+          const o = s as { what?: string; why?: string };
+          return { what: String(o.what ?? "").trim(), why: String(o.why ?? "").trim() };
+        })
+        .filter((s) => s.what);
+      if (!steps.length) return null;
+      return JSON.stringify(steps);
+    } catch {
+      return null;
+    }
+  }
+
+  const system = `You tailor a questionnaire answer for an Agent Skill.
+Rewrite the author's draft to be clearer, more specific, and more useful for an AI assistant — while keeping their voice and facts.
+Do NOT invent tools, metrics, company names, or examples they did not imply.
+Return ONLY the improved answer text. No preamble, no quotes around the whole answer.`;
+  const user = [
+    `Skill: ${params.skillTitle}`,
+    `Role: ${params.role}`,
+    `Section: ${params.sectionTitle}`,
+    `Question: ${params.questionLabel}`,
+    params.questionHelp ? `Hint: ${params.questionHelp}` : "",
+    params.sectionContext ? `Other answers in this section:\n${params.sectionContext}` : "",
+    "",
+    "Current answer:",
+    params.currentAnswer || "(empty — draft a solid starter based only on the question and role)",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return complete(system, user, 1200);
+}

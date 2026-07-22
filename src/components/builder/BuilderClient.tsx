@@ -206,6 +206,7 @@ export function BuilderClient() {
               defaultSaveMode={config.saveMode}
               repo={config.repo}
               llmConfigured={config.llmConfigured}
+              onBack={goBack}
               onSaved={(r) => {
                 setResult(r);
                 setPhase("result");
@@ -230,15 +231,6 @@ export function BuilderClient() {
               <Button onClick={goNext}>
                 {phase === "review" ? "Generate skill" : "Continue"}
                 <ArrowRight className="size-4" aria-hidden />
-              </Button>
-            </div>
-          )}
-
-          {phase === "preview" && (
-            <div className="mt-6">
-              <Button variant="ghost" onClick={goBack}>
-                <ArrowLeft className="size-4" aria-hidden />
-                Back to review
               </Button>
             </div>
           )}
@@ -271,7 +263,7 @@ function headerFor(phase: Phase, sectionIndex: number): { title: string; blurb: 
   return {
     title: "Your SKILL.md",
     blurb:
-      "Preview, enhance with AI to fill gaps, then save it to the team skills repository.",
+      "Enhance all regenerates the full skill from your answers. Redo undoes the last change. Back returns to review.",
   };
 }
 
