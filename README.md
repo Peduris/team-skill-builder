@@ -21,7 +21,8 @@ Secrets (`LLM_API_KEY`, `GITHUB_TOKEN`) stay server-side. Never import `@/lib/en
 2. **Identity & basics** — Name, role, optional email; skill title → live slug; description with char counter + optional “Improve with AI”.
 3. **Hybrid questionnaire** — Fixed core sections (when / context / process / judgment / standards / mistakes / examples / resources) plus 1–3 AI follow-ups per section (skippable). File uploads with text extraction.
 4. **Review → Generate** — LLM assembles `SKILL.md` (deterministic fallback if LLM fails). Raw/rendered preview; edit before save.
-5. **Save** — Frontmatter validation blocks invalid files. `GITHUB_SAVE_MODE=pr` (default) opens a PR; `direct` commits to the default branch. Download always available.
+5. **Enhance skill** — optional LLM pass that fills gaps, sharpens triggers, and deepens judgment from the questionnaire (does not invent fake company facts).
+6. **Save** — Frontmatter validation blocks invalid files. Saves to the configured team skills repo (`GITHUB_OWNER`/`GITHUB_REPO`). `GITHUB_SAVE_MODE=pr` (default) opens a PR; `direct` commits to the default branch. Download always available.
 
 ## Setup
 
@@ -49,6 +50,8 @@ See [`.env.local.example`](.env.local.example):
 | `GITHUB_DEFAULT_BRANCH` | Usually `main` |
 | `GITHUB_SAVE_MODE` | `pr` (default) or `direct` |
 | `MAX_UPLOAD_MB` | Per-file size cap (default `10`) |
+
+**Production target repo:** [Peduris/team-skills](https://github.com/Peduris/team-skills)
 
 The target repo should have (or will grow) a `skills/` directory. Files land at:
 

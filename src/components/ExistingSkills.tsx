@@ -10,6 +10,7 @@ import type { ExistingSkill } from "@/lib/types";
 export function ExistingSkills() {
   const [skills, setSkills] = useState<ExistingSkill[]>([]);
   const [configured, setConfigured] = useState(true);
+  const [repo, setRepo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -18,10 +19,15 @@ export function ExistingSkills() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/skills${refresh ? "?refresh=1" : ""}`);
-      const data = await res.json();
+      const [skillsRes, configRes] = await Promise.all([
+        fetch(`/api/skills${refresh ? "?refresh=1" : ""}`),
+        fetch("/api/config"),
+      ]);
+      const data = await skillsRes.json();
+      const config = await configRes.json();
       setConfigured(data.configured);
       setSkills(data.skills ?? []);
+      setRepo(config.repo ?? null);
       if (data.error) setError(data.error);
     } catch {
       setError("Could not reach the server.");
@@ -56,12 +62,22 @@ export function ExistingSkills() {
   return (
     <section aria-labelledby="library-heading" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <BookOpen className="size-5 text-brand" aria-hidden />
           <h2 id="library-heading" className="text-lg font-semibold">
-            Skill library
+            Existing team skills
           </h2>
           <Badge>{skills.length}</Badge>
+          {repo && (
+            <a
+              href={`https://github.com/${repo}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-muted hover:text-brand-ink hover:underline"
+            >
+              {repo}
+            </a>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">

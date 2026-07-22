@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, RefreshCw, Save, Code, Eye, AlertTriangle } from "lucide-react";
+import {
+  Download,
+  RefreshCw,
+  Save,
+  Code,
+  Eye,
+  AlertTriangle,
+  Sparkles,
+  FolderGit2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Feedback";
 import { Select } from "@/components/ui/Field";
@@ -14,20 +23,27 @@ export function PreviewStep({
   draft,
   githubConfigured,
   defaultSaveMode,
+  repo,
+  llmConfigured,
   onSaved,
 }: {
   draft: SkillDraft;
   githubConfigured: boolean;
   defaultSaveMode: SaveMode;
+  repo: string | null;
+  llmConfigured: boolean;
   onSaved: (result: SaveResult) => void;
 }) {
   const [markdown, setMarkdown] = useState("");
   const [generating, setGenerating] = useState(true);
+  const [enhancing, setEnhancing] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [enhancedOnce, setEnhancedOnce] = useState(false);
   const [view, setView] = useState<"rendered" | "raw">("rendered");
   const [mode, setMode] = useState<SaveMode>(defaultSaveMode);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [enhanceErr, setEnhanceErr] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
 
@@ -77,6 +93,33 @@ export function PreviewStep({
     URL.revokeObjectURL(url);
   };
 
+  const enhance = async () => {
+    if (!markdown.trim() || enhancing || generating) return;
+    setEnhancing(true);
+    setEnhanceErr(null);
+    setSaveErr(null);
+    try {
+      const res = await fetch("/api/llm/enhance", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ draft, markdown }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEnhanceErr(data.error || "Enhancement failed.");
+        return;
+      }
+      setMarkdown(data.markdown ?? markdown);
+      setUsedFallback(false);
+      setEnhancedOnce(true);
+      setView("rendered");
+    } catch {
+      setEnhanceErr("Could not reach the enhancer. Your current draft is unchanged.");
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const save = async () => {
     setSaving(true);
     setSaveErr(null);
@@ -99,11 +142,30 @@ export function PreviewStep({
     }
   };
 
+  const busy = generating || enhancing;
   const canSave =
-    validation.ok && !generating && (!duplicate || confirmUpdate) && githubConfigured;
+    validation.ok && !busy && (!duplicate || confirmUpdate) && githubConfigured;
 
   return (
     <div className="space-y-4">
+      {repo && (
+        <Notice tone="info">
+          <span className="inline-flex items-center gap-1.5">
+            <FolderGit2 className="size-4 shrink-0" aria-hidden />
+            Saves go to{" "}
+            <a
+              href={`https://github.com/${repo}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand-ink hover:underline"
+            >
+              {repo}
+            </a>{" "}
+            under <code className="font-mono text-xs">skills/&lt;slug&gt;/</code>
+          </span>
+        </Notice>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-md border border-border-strong bg-surface p-0.5">
           <ToggleBtn active={view === "rendered"} onClick={() => setView("rendered")}>
@@ -113,17 +175,50 @@ export function PreviewStep({
             <Code className="size-4" aria-hidden /> Raw / edit
           </ToggleBtn>
         </div>
-        <Button variant="ghost" size="sm" onClick={generate} loading={generating}>
-          <RefreshCw className="size-4" aria-hidden /> Regenerate
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={generate}
+            loading={generating}
+            disabled={enhancing}
+          >
+            <RefreshCw className="size-4" aria-hidden /> Regenerate
+          </Button>
+          {llmConfigured && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={enhance}
+              loading={enhancing}
+              disabled={busy || !markdown.trim()}
+            >
+              <Sparkles className="size-4" aria-hidden />
+              {enhancedOnce ? "Enhance again" : "Enhance skill"}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {llmConfigured && (
+        <p className="text-sm text-muted">
+          <strong className="font-medium text-ink">Enhance skill</strong> asks the AI to fill
+          gaps, sharpen triggers, and deepen judgment using your answers — without inventing
+          fake company facts.
+        </p>
+      )}
 
       {usedFallback && (
         <Notice tone="info">
           Built with the deterministic template (AI assembly unavailable). You can edit the raw
-          file below before saving.
+          file below before saving{llmConfigured ? ", or try Enhance skill" : ""}.
         </Notice>
       )}
+
+      {enhancedOnce && !enhancing && (
+        <Notice tone="ok">Skill enhanced. Review the changes, then save.</Notice>
+      )}
+      {enhanceErr && <Notice tone="danger">{enhanceErr}</Notice>}
 
       {!validation.ok && (
         <Notice tone="danger" title="This file can't be saved yet">
@@ -146,10 +241,10 @@ export function PreviewStep({
       )}
 
       <div className="min-h-[300px] rounded-lg border border-border bg-surface">
-        {generating ? (
+        {busy ? (
           <div className="flex h-72 items-center justify-center text-sm text-muted">
             <span className="mr-2 size-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-            Assembling your SKILL.md…
+            {enhancing ? "Enhancing your skill…" : "Assembling your SKILL.md…"}
           </div>
         ) : view === "rendered" ? (
           <div className="p-5">

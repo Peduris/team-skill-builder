@@ -46,6 +46,12 @@ export default function Home() {
 
       <hr className="my-14 border-border" />
 
+      <div className="mb-4 max-w-2xl">
+        <p className="text-sm text-muted">
+          Skills already created by anyone on the team live in the shared repository. Browse
+          them before you start so you don&apos;t reinvent one that exists.
+        </p>
+      </div>
       <ExistingSkills />
     </main>
   );

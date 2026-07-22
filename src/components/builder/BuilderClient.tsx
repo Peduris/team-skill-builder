@@ -22,6 +22,7 @@ interface Config {
   githubConfigured: boolean;
   llmConfigured: boolean;
   saveMode: SaveMode;
+  repo: string | null;
 }
 
 export function BuilderClient() {
@@ -34,6 +35,7 @@ export function BuilderClient() {
     githubConfigured: false,
     llmConfigured: false,
     saveMode: "pr",
+    repo: null,
   });
 
   useEffect(() => {
@@ -202,6 +204,8 @@ export function BuilderClient() {
               draft={draft}
               githubConfigured={config.githubConfigured}
               defaultSaveMode={config.saveMode}
+              repo={config.repo}
+              llmConfigured={config.llmConfigured}
               onSaved={(r) => {
                 setResult(r);
                 setPhase("result");
@@ -266,7 +270,8 @@ function headerFor(phase: Phase, sectionIndex: number): { title: string; blurb: 
     return { title: "Review your answers", blurb: "Check everything, then generate the file." };
   return {
     title: "Your SKILL.md",
-    blurb: "Preview, edit, and save it to your team repository.",
+    blurb:
+      "Preview, enhance with AI to fill gaps, then save it to the team skills repository.",
   };
 }
 
