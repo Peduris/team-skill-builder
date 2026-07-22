@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // pdf-parse and mammoth are Node-only and must not be bundled by Turbopack/webpack.
+  serverExternalPackages: ["pdf-parse", "mammoth"],
 };
 
 export default nextConfig;

@@ -1,26 +1,179 @@
 @import "tailwindcss";
 
+/*
+  Team Skill Builder design tokens.
+  Register: product. Color strategy: restrained (tinted neutrals + one iris accent).
+  See supporting-files/artifacts/iter-1/design-notes.md.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: oklch(0.985 0.004 275);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.975 0.005 275);
+  --ink: oklch(0.23 0.02 275);
+  --muted: oklch(0.5 0.02 275);
+  --border: oklch(0.9 0.008 275);
+  --border-strong: oklch(0.82 0.012 275);
+  --brand: oklch(0.55 0.19 275);
+  --brand-ink: oklch(0.42 0.17 275);
+  --brand-wash: oklch(0.96 0.02 275);
+  --ok: oklch(0.6 0.13 155);
+  --warn: oklch(0.68 0.15 70);
+  --danger: oklch(0.57 0.2 25);
+  --danger-wash: oklch(0.96 0.03 25);
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-wash: var(--brand-wash);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-mono-src);
+
+  --radius-lg: var(--radius);
+  --radius-md: var(--radius-sm);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--brand-wash);
+  color: var(--brand-ink);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Visible, consistent keyboard focus everywhere. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Utility: constrain prose measure. */
+.measure {
+  max-width: 68ch;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-rise {
+  animation: fade-rise 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Rendered SKILL.md preview typography. */
+.prose-skill {
+  color: var(--ink);
+  font-size: 0.925rem;
+  line-height: 1.65;
+}
+.prose-skill :where(h1) {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+.prose-skill :where(h2) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.prose-skill :where(h3) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.35rem;
+}
+.prose-skill :where(p, ul, ol) {
+  margin: 0.5rem 0;
+}
+.prose-skill :where(ul, ol) {
+  padding-left: 1.25rem;
+}
+.prose-skill :where(ul) {
+  list-style: disc;
+}
+.prose-skill :where(ol) {
+  list-style: decimal;
+}
+.prose-skill :where(li) {
+  margin: 0.2rem 0;
+}
+.prose-skill :where(code) {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-skill :where(hr) {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+.prose-skill :where(strong) {
+  font-weight: 600;
+}
+.prose-skill :where(a) {
+  color: var(--brand-ink);
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

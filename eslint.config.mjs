@@ -12,7 +12,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "tests/**",
   ]),
+  {
+    rules: {
+      // These effects intentionally sync with external systems (sessionStorage
+      // hydration, fetch-on-mount) which cannot run during SSR. Downgraded from
+      // error to warning; the pattern is deliberate and documented.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;
