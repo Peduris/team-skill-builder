@@ -11,8 +11,9 @@
     "test:unit": "npx tsx --test tests/validation.unit.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.112.5",
+    "@ai-sdk/gateway": "^4.0.26",
     "@octokit/rest": "^22.0.1",
+    "ai": "^7.0.34",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
     "lucide-react": "^1.25.0",

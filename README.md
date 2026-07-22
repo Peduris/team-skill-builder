@@ -8,12 +8,12 @@ Internal web app that walks a team member through a guided questionnaire and pro
 |-------|--------|
 | Framework | **Next.js 16** (App Router) + **TypeScript** |
 | UI | **Tailwind CSS 4** + small local UI primitives (shadcn-style) |
-| LLM | **Anthropic** (`@anthropic-ai/sdk`) — follow-ups, description polish, SKILL.md assembly |
+| LLM | **Vercel AI Gateway** via AI SDK (`ai`) — follow-ups, description polish, Enhance Skill, SKILL.md assembly |
 | GitHub | **Octokit** (`@octokit/rest`) — list skills, PR or direct commit |
 | Deploy target | **Vercel** |
 | Persistence | None for v1 — in-memory + `sessionStorage` mid-survey only (no accounts, no DB) |
 
-Secrets (`LLM_API_KEY`, `GITHUB_TOKEN`) stay server-side. Never import `@/lib/env` from client components.
+Secrets (`GITHUB_TOKEN`, optional `AI_GATEWAY_API_KEY`) stay server-side. Never import `@/lib/env` from client components. On Vercel, AI Gateway authenticates via OIDC — no Anthropic/OpenAI keys required.
 
 ## What it does
 
@@ -30,7 +30,7 @@ Secrets (`LLM_API_KEY`, `GITHUB_TOKEN`) stay server-side. Never import `@/lib/en
 cd skill-builder
 npm install
 cp .env.local.example .env.local
-# Fill in LLM_API_KEY and GitHub vars
+# Fill GitHub vars. For LLM locally: `npx vercel env pull` (OIDC) or set AI_GATEWAY_API_KEY
 npm run dev
 ```
 
@@ -42,11 +42,10 @@ See [`.env.local.example`](.env.local.example):
 
 | Variable | Purpose |
 |----------|---------|
-| `LLM_PROVIDER` | Currently `anthropic` |
-| `LLM_API_KEY` | Anthropic API key (server-only) |
-| `LLM_MODEL` | Default `claude-3-5-sonnet-latest` |
+| `LLM_MODEL` | AI Gateway model slug, default `anthropic/claude-sonnet-4.6` |
+| `AI_GATEWAY_API_KEY` | Optional static gateway key (OIDC preferred on Vercel) |
 | `GITHUB_TOKEN` | Fine-grained PAT or app token with repo contents + PR write |
-| `GITHUB_OWNER` / `GITHUB_REPO` | Target team skills repo |
+| `GITHUB_OWNER` / `GITHUB_REPO` | Target team skills repo (default `Peduris` / `team-skills`) |
 | `GITHUB_DEFAULT_BRANCH` | Usually `main` |
 | `GITHUB_SAVE_MODE` | `pr` (default) or `direct` |
 | `MAX_UPLOAD_MB` | Per-file size cap (default `10`) |
@@ -99,9 +98,11 @@ npx playwright test   # smoke tests (install browsers first if needed)
 
 ## Deploy (Vercel)
 
-1. Push this app (or the monorepo folder) and import the `skill-builder` project in Vercel.
-2. Set the same env vars in the Vercel project settings (Production + Preview).
-3. Deploy. Point `GITHUB_*` at your team skills repo.
+1. Push this app and import the `skill-builder` project in Vercel (already: `team-skill-builder`).
+2. Set `GITHUB_*` env vars. AI Gateway uses **OIDC automatically** on Vercel — no provider API keys.
+3. Optionally set `LLM_MODEL` (default `anthropic/claude-sonnet-4.6`).
+4. Enable AI Gateway for the team/project if prompted in the Vercel dashboard.
+5. Deploy.
 
 ## Project layout
 

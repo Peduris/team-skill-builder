@@ -1,12 +1,18 @@
 import "server-only";
 import type { SaveMode } from "./types";
 
-/** Central, server-only access to configuration. Never import from client code. */
+/**
+ * Central, server-only access to configuration. Never import from client code.
+ *
+ * LLM calls go through Vercel AI Gateway (AI SDK `generateText` with a
+ * `provider/model` string). Auth priority:
+ * 1. AI_GATEWAY_API_KEY (optional static key)
+ * 2. VERCEL_OIDC_TOKEN (auto on Vercel + after `vercel env pull`)
+ */
 export const env = {
   llm: {
-    provider: process.env.LLM_PROVIDER || "anthropic",
-    apiKey: process.env.LLM_API_KEY || process.env.ANTHROPIC_API_KEY || "",
-    model: process.env.LLM_MODEL || "claude-3-5-sonnet-latest",
+    /** Gateway model slug, e.g. anthropic/claude-sonnet-4.6 */
+    model: process.env.LLM_MODEL || "anthropic/claude-sonnet-4.6",
   },
   github: {
     token: process.env.GITHUB_TOKEN || "",
@@ -18,8 +24,13 @@ export const env = {
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB || "10"),
 };
 
+/** True when AI Gateway auth is available (OIDC on Vercel, or an explicit key). */
 export function llmConfigured(): boolean {
-  return Boolean(env.llm.apiKey);
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY ||
+      process.env.VERCEL_OIDC_TOKEN ||
+      process.env.VERCEL === "1",
+  );
 }
 
 export function githubConfigured(): boolean {

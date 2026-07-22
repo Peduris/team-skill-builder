@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateText } from "ai";
 import { env, llmConfigured } from "./env";
 import type { SkillDraft } from "./types";
 import {
@@ -8,31 +8,21 @@ import {
   composeUserPayload,
 } from "./assembler";
 
-function client(): Anthropic | null {
-  if (!llmConfigured()) return null;
-  return new Anthropic({ apiKey: env.llm.apiKey });
-}
-
 async function complete(
   system: string,
   user: string,
   maxTokens = 2000,
 ): Promise<string | null> {
-  const anthropic = client();
-  if (!anthropic) return null;
+  if (!llmConfigured()) return null;
   try {
-    const res = await anthropic.messages.create({
+    const { text } = await generateText({
+      // Routes through Vercel AI Gateway (OIDC on Vercel, or AI_GATEWAY_API_KEY).
       model: env.llm.model,
-      max_tokens: maxTokens,
       system,
-      messages: [{ role: "user", content: user }],
+      prompt: user,
+      maxOutputTokens: maxTokens,
     });
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
-    return text || null;
+    return text?.trim() || null;
   } catch (err) {
     console.error("[llm] completion failed:", (err as Error).message);
     return null;
@@ -82,7 +72,6 @@ export async function assembleSkill(
   if (!out) {
     return { markdown: buildFallbackSkill(draft), usedFallback: true };
   }
-  // Strip accidental surrounding code fences if the model added them.
   const cleaned = out
     .replace(/^```(?:markdown|md)?\s*\n/, "")
     .replace(/\n```\s*$/, "")

@@ -15,7 +15,10 @@ interface EnhanceBody {
 export async function POST(request: Request) {
   if (!llmConfigured()) {
     return NextResponse.json(
-      { error: "LLM is not configured. Set LLM_API_KEY to enable Enhance Skill." },
+      {
+        error:
+          "LLM is not configured. On Vercel, AI Gateway uses OIDC automatically. Locally run `vercel env pull`, or set AI_GATEWAY_API_KEY.",
+      },
       { status: 503 },
     );
   }
